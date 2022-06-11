@@ -1,0 +1,332 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "",
+    "Metadata": {
+
+    },
+    "Parameters": {
+      "vpcCIDR": {
+          "Description": "choose vpcCIDR",
+          "Type": "String",
+          "Default": "10.0.0.0/16"
+      }
+    },
+    "Mappings": {
+
+    },
+    "Conditions": {
+
+    },
+    "Resources": {
+      "myVPC": {
+        "Type": "AWS::EC2::VPC",
+        "Properties": {
+          "CidrBlock": { "Ref": "vpcCIDR" },
+          "Tags": [{ "Key": "Name", "Value":  "myVPC" }]
+        }
+      },
+      "MySub": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": "us-east-1a",
+          "MapPublicIpOnLaunch": true,
+          "VpcId": { "Ref": "myVPC" },
+          "CidrBlock": "10.0.0.0/24",
+          "Tags": [{ "Key": "Name", "Value":  "MySub" }]
+        }
+      },
+      "MySub2": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": "us-east-1b",
+          "MapPublicIpOnLaunch": true,
+          "VpcId": { "Ref": "myVPC" },
+          "CidrBlock": "10.0.1.0/24",
+          "Tags": [{ "Key": "Name", "Value":  "MySub2" }]
+        }
+      },
+      "MySub3": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": "us-east-1c",
+          "VpcId": { "Ref": "myVPC" },
+          "CidrBlock":  "10.0.2.0/24",
+          "Tags": [{ "Key": "Name", "Value":  "MySub3" }]
+        }
+      },
+      "MySub4": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": "us-east-1d",
+          "VpcId": { "Ref": "myVPC" },
+          "CidrBlock": "10.0.3.0/24",
+          "Tags": [{ "Key": "Name", "Value":  "MySub4" }]
+        }
+      },
+      "myIGW": {
+        "Type": "AWS::EC2::InternetGateway",
+        "Properties": {
+          "Tags": [{ "Key": "Name", "Value":  "My-IGW" }]
+        }
+      },
+      "AttachGateway": {
+        "Type": "AWS::EC2::VPCGatewayAttachment",
+        "Properties": {
+          "VpcId": { "Ref": "myVPC" },
+          "InternetGatewayId": { "Ref": "myIGW" }
+        }
+      },
+      "myVPCRoute": {
+        "Type": "AWS::EC2::RouteTable",
+        "Properties": {
+          "VpcId": { "Ref": "myVPC" },
+          "Tags": [{ "Key": "Name", "Value":  "myVPCRoute" }]
+        }
+      },
+      "RT01Route": {
+        "Type": "AWS::EC2::Route",
+        "Properties": {
+          "RouteTableId": { "Ref": "myVPCRoute" },
+          "DestinationCidrBlock": "0.0.0.0/0",
+          "GatewayId": { "Ref": "myIGW" }
+        }
+      },
+      "SubAssoc01": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": { "Ref": "MySub" },
+          "RouteTableId": { "Ref": "myVPCRoute" }
+        }
+      },
+      "SubAssoc02": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": { "Ref": "MySub2" },
+          "RouteTableId": { "Ref": "myVPCRoute" }
+        }
+      },
+      "mySG" : {
+        "Type" : "AWS::EC2::SecurityGroup",
+        "Properties" : {
+          "GroupDescription" : "SG for ssh http traffic",
+          "SecurityGroupIngress" : [
+            {"IpProtocol": "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"},
+            {"IpProtocol": "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"}
+          ],
+          "VpcId" : { "Ref": "myVPC" },
+          "Tags" :  [{ "Key": "Name", "Value":  "mySG" }]
+        }
+      },
+      "ELBSG" : {
+        "Type" : "AWS::EC2::SecurityGroup",
+        "Properties" : {
+          "GroupDescription" : "SG for ELB traffic",
+          "SecurityGroupIngress" : [
+            {"IpProtocol": "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+            {"IpProtocol": "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : "0.0.0.0/0"}
+          ],
+          "VpcId" : { "Ref": "myVPC" },
+          "Tags" :  [ { "Key": "Name", "Value":  "ELBSG" } ]
+        }
+      },
+      "myRDSsg" : {
+        "Type" : "AWS::EC2::SecurityGroup",
+        "Properties" : {
+          "GroupDescription" : "internal connection between instance and rds",
+          "SecurityGroupIngress" : [
+          {"IpProtocol": "tcp", "FromPort": "3306", "ToPort": "3306", "CidrIp": "10.0.0.0/24"},
+          {"IpProtocol": "tcp", "FromPort": "3306", "ToPort": "3306", "CidrIp": "10.0.1.0/24"}
+          ],
+          "VpcId" : { "Ref": "myVPC" },
+          "Tags" :  [ { "Key": "Name", "Value":  "myRDSsg" } ]
+        }
+    },
+    "RDSsubnetgroup": {
+         "Type": "AWS::RDS::DBSubnetGroup",
+         "Properties": {
+            "DBSubnetGroupDescription": "subnetgroup for db instance",
+            "SubnetIds": [ { "Ref": "MySub3" }, { "Ref": "MySub4" } ],
+            "Tags": [ { "Key": "Name", "Value":  "RDSsubnetgroup" } ]
+         }
+  },
+  "dbwebserver": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+              "AllocatedStorage": "20",
+              "DBInstanceClass": "db.t2.micro",
+              "AllowMajorVersionUpgrade": "false",
+              "AutoMinorVersionUpgrade": "false",
+              "BackupRetentionPeriod": "0",
+              "DBInstanceIdentifier": "ARUNDB",
+              "DBName": "ARUNDB",
+              "DBSubnetGroupName": { "Ref": "RDSsubnetgroup" },
+              "Engine": "MariaDB",
+              "EngineVersion": "10.6.7",
+              "MasterUsername": "admin",
+              "MasterUserPassword": "123456789",
+              "MultiAZ": "false",
+              "Port": "3306",
+              "PubliclyAccessible": "false",
+              "StorageType": "gp2",
+              "Tags": [{ "Key": "Name", "Value":  "dbwebserver" }],
+              "VPCSecurityGroups": [ { "Ref": "myRDSsg" } ]
+            }
+          },
+          "webserver12": {
+          "Type": "AWS::EC2::Instance",
+          "Properties": {
+              "KeyName": "my-server-01",
+              "SubnetId": { "Ref": "MySub" },
+              "ImageId": "ami-0022f774911c1d690",
+              "InstanceType": "t2.micro",
+              "Monitoring": "false",
+              "SecurityGroupIds" : [{ "Ref": "mySG" }],
+              "Tags": [
+                  {
+                      "Key": "Name",
+                      "Value": "webserver13"
+                  }
+              ],
+              "UserData": {
+                  "Fn::Base64": {
+                      "Fn::Join": [
+                          "",
+                          [
+                              "#!/bin/bash -ex\n",
+                              "yum update -y \n",
+                              "amazon-linux-extras install epel -y \n",
+                              "amazon-linux-extras enable php7.4 \n",
+                              "yum install php httpd php-mysqlnd -y \n",
+                              "systemctl start httpd \n",
+                              "systemctl enable httpd \n",
+                              "cd /var/www/html/ \n",
+                              "wget https://wordpress.org/latest.tar.gz \n",
+                              "tar -xvzf latest.tar.gz \n",
+                              "mv  wordpress/* . \n",
+                              "mv wp-config-sample.php wp-config.php \n",
+                              "sed -i 's/database_name_here/ARUNDB/' wp-config.php \n",
+                              "sed -i 's/username_here/admin/' wp-config.php \n",
+                              "sed -i 's/password_here/123456789/' wp-config.php \n",
+                              "sed -i 's/localhost/arundb.cge9sbpitmtf.us-east-1.rds.amazonaws.com/' wp-config.php \n",
+                              "systemctl restart httpd \n"
+                          ]
+                      ]
+                  }
+              }
+      }
+    },
+    "myTargetgroup":{
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties":{
+        "Name": "myTargetGroup",
+        "Protocol": "HTTP",
+        "Port": "80",
+          "VpcId": { "Ref": "myVPC" },
+          "Targets":[{ "Id": { "Ref": "webserver12" }, "Port": "80" }],
+           "Tags": [{ "Key": "Name", "Value":  "myTargetgroup" }],
+         }
+       },
+       "myALb":{
+         "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+          "Properties": {
+            "Name": "myALB",
+            "SecurityGroups": [{ "Ref": "ELBSG" }],
+            "Subnets": [{ "Ref": "MySub" }, { "Ref": "MySub2" }],
+            "Tags": [{ "Key": "Name", "Value":  "myALb" }]
+          }
+        },
+        "HTTP80listener": {
+    "Type": "AWS::ElasticLoadBalancingV2::Listener",
+    "Properties": {
+        "DefaultActions": [
+            {
+                "Type": "redirect",
+                "RedirectConfig": {
+                       "Protocol": "HTTPS",
+                       "Port": 443,
+                       "Host": "#{host}",
+                       "Path": "/#{path}",
+                       "Query": "#{query}",
+                       "StatusCode": "HTTP_301"
+                   }
+               }
+           ],
+           "LoadBalancerArn": {
+               "Ref": "myALb"
+           },
+           "Port": "80",
+           "Protocol": "HTTP"
+       }
+   },
+   "HTTPSListerner": {
+  "Type": "AWS::ElasticLoadBalancingV2::Listener",
+  "Properties": {
+    "Certificates": [
+      {
+        "CertificateArn" : "arn:aws:acm:us-east-1:285837272245:certificate/197301d3-3e56-4e5d-94c4-ce490d832a5e"
+      }
+    ],
+    "DefaultActions": [
+      {
+        "Type": "forward",
+        "TargetGroupArn": {
+          "Ref": "myTargetgroup",
+        },
+      }
+    ],
+    "LoadBalancerArn": { "Ref": "myALb" },
+    "Port": "443",
+    "Protocol": "HTTPS"
+  }
+},
+"mydns": {
+  "Type": "AWS::Route53::RecordSetGroup",
+  "Properties": {
+    "HostedZoneName": "arun.ga.",
+    "RecordSets": [ {
+      "Name": "arun.ga.",
+      "Type": "A",
+      "AliasTarget": {
+        "HostedZoneId": { "Fn::GetAtt": [ "myALb", "CanonicalHostedZoneID"]},
+        "DNSName": { "Fn::GetAtt": ["myALb", "DNSName"]}
+      }
+      }
+    ]
+   }
+},
+"MyAutoscaling" : {
+    "Type" : "AWS::AutoScaling::AutoScalingGroup",
+    "Properties" : {
+      "VPCZoneIdentifier": [ { "Ref" : "MySub" }, { "Ref": "MySub2" } ],
+   "LaunchTemplate": {
+     "LaunchTemplateName": "myTempalte",
+     "Version": "1"
+     },
+        "MaxSize" : "5",
+        "MinSize" : "0",
+        "DesiredCapacity": "1",
+        "TargetGroupARNs": [ { "Ref": "myTargetgroup" } ],
+        "Tags" : [ {"Key" : "Name",
+                    "Value" : "Autoscaling",
+                    "PropagateAtLaunch" : "True"}
+                ]
+    }
+},
+"myCPUPolicy":{
+     "Type":"AWS::AutoScaling::ScalingPolicy",
+     "Properties":{
+       "AutoScalingGroupName":{ "Ref":"MyAutoscaling" },
+       "PolicyType":"TargetTrackingScaling",
+       "TargetTrackingConfiguration":{
+         "PredefinedMetricSpecification":{
+           "PredefinedMetricType":"ASGAverageCPUUtilization"
+         },
+         "TargetValue": "70",
+       }
+     }
+}
+},
+      "Outputs": {
+
+      }
+}
