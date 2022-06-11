@@ -1,0 +1,84 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "",
+    "Metadata": {
+
+    },
+    "Parameters": {
+      "VPCCIDR": {
+          "Description": "Choose VPC CIDR",
+          "Type": "String",
+          "Default": "172.25.0.0/16",
+          "AllowedValues": ["172.25.0.0/16", "172.27.0.0/16", "172.29.0.0/16"]
+    },
+    "Subnet01CIDR": {
+        "Description": "Choose Subnet01 CIDR",
+        "Type": "String",
+        "Default": "172.25.0.0/20",
+        "AllowedValues": ["172.25.0.0/20", "172.27.0.0/20", "172.29.0.0/20"]
+    },
+    "Subnet02CIDR": {
+        "Description": "Choose Subnet02 CIDR",
+        "Type": "String",
+        "Default": "172.25.16.0/20",
+        "AllowedValues": ["172.25.16.0/20", "172.27.16.0/20", "172.29.16.0/20"]
+   },
+   "Subnet01AZ": {
+       "Description": "Choose AZ for Subnet01",
+       "Type": "AWS::EC2::AvailabilityZone::Name",
+       "Default": "us-east-1a"
+   },
+   "Subnet02AZ": {
+       "Description": "Choose AZ for Subnet02",
+       "Type": "AWS::EC2::AvailabilityZone::Name",
+       "Default": "us-east-1b"
+   },
+   "InstanceType": {
+       "Description": "Choose Instance Type",
+       "Type": "String",
+       "Default": "t2.micro",
+       "AllowedValues": ["t2.nano","t2.small","t2.micro"]
+   },
+  "Keypair": {
+      "Description": "Choose Keypair",
+      "Type": AWS::EC2::Keypair::KeyName,
+      "Default": "httpserver"
+  }
+ },
+    "Mappings": {
+
+    },
+    "Conditions": {
+
+    },
+    "Resources": {
+      "VPC001": {
+        "Type": "AWS::EC2::VPC",
+        "Properties": {
+          "CidrBlock": { "Ref": "VPCCIDR" },
+          "Tags": [{ "Key": "Name", "Value":  "VPC001" }]
+        }
+      },
+      "Subnet01VPC001": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "Subnet01AZ" },
+          "VpcId": { "Ref": "VPC001" },
+          "CidrBlock": { "Ref": "Subnet01CIDR" },
+          "Tags": [{ "Key": "Name", "Value":  "Subnet01VPCOO1" }]
+        }
+      },
+      "Subnet02VPC002": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "Subnet02AZ" },
+          "VpcId": { "Ref": "VPC001" },
+          "CidrBlock": { "Ref": "Subnet02CIDR" },
+          "Tags": [{ "Key": "Name", "Value":  "Subnet02VPC001" }]
+        }
+      }
+    },
+    "Outputs": {
+
+    }
+}
