@@ -1,0 +1,128 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "",
+    "Metadata": {
+
+    },
+    "Parameters": {
+
+    },
+    "Mappings": {
+
+    },
+    "Conditions": {
+
+    },
+    "Resources": {
+"NewVPC": {
+  "Type": "AWS::EC2::VPC",
+  "Properties": {
+    "CidrBlock": "172.27.0.0/16",
+    "Tags": [{ "Key": "Name", "Value":  "NewVPC" }]
+  }
+},
+"NewVPCsubnet01": {
+  "Type": "AWS::EC2::Subnet",
+  "Properties": {
+    "AvailabilityZone": "us-east-1a",
+    "VpcId": { "Ref": "NewVPC" },
+    "CidrBlock": "172.27.0.0/24",
+    "Tags": [{ "Key": "Name", "Value":  "NewVPCsubnet01" }]
+  }
+},
+"NewVPCsubnet02": {
+  "Type": "AWS::EC2::Subnet",
+  "Properties": {
+    "AvailabilityZone": "us-east-1b",
+    "VpcId": { "Ref": "NewVPC" },
+    "CidrBlock": "172.27.1.0/24",
+    "Tags": [{ "Key": "Name", "Value":  "NewVPCsubnet02" }]
+  }
+},
+"NewVPCIGW": {
+  "Type": "AWS::EC2::InternetGateway",
+  "Properties": {
+    "Tags": [{ "Key": "Name", "Value":  "NewVPCIGW" }]
+  }
+},
+"AttachGateway": {
+  "Type": "AWS::EC2::VPCGatewayAttachment",
+  "Properties": {
+    "VpcId": { "Ref": "NewVPC" },
+    "InternetGatewayId": { "Ref": "NewVPCIGW" }
+  }
+},
+"NewVPCRT01": {
+  "Type": "AWS::EC2::RouteTable",
+  "Properties": {
+    "VpcId": { "Ref": "NewVPC" },
+    "Tags": [{ "Key": "Name", "Value":  "NewVPCRT01" }]
+  }
+},
+"NewVPCRT01Route": {
+  "Type": "AWS::EC2::Route",
+  "Properties": {
+    "RouteTableId": { "Ref": "NewVPCRT01" },
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": { "Ref": "NewVPCIGW" }
+  }
+},
+"Sub01NewVPCRT01Assoc": {
+  "Type": "AWS::EC2::SubnetRouteTableAssociation",
+  "Properties": {
+    "SubnetId": { "Ref": "NewVPCsubnet01" },
+    "RouteTableId": { "Ref": "NewVPCRT01" }
+  }
+},
+"Sub02NewVPCRT01Assoc": {
+  "Type": "AWS::EC2::SubnetRouteTableAssociation",
+  "Properties": {
+    "SubnetId": { "Ref": "NewVPCsubnet02" },
+    "RouteTableId": { "Ref": "NewVPCRT01" }
+  }
+},
+"NewVPCSG" : {
+  "Type" : "AWS::EC2::SecurityGroup",
+  "Properties" : {
+    "GroupDescription" : "SG for ssh http traffic",
+    "SecurityGroupIngress" : [
+      {"IpProtocol": "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"},
+      {"IpProtocol": "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+    ],
+    "VpcId" : { "Ref": "NewVPC" },
+    "Tags" :  [ { "Key": "Name", "Value":  "NewVPCSG" } ]
+  }
+},
+"MyEc2Server": {
+    "Type": "AWS::EC2::Instance",
+    "Properties": {
+        "KeyName": "my-server-01",
+        "SubnetId": { "Ref": "NewVPCsubnet01" },
+        "ImageId": "ami-0022f774911c1d690",
+        "InstanceType": "t2.micro",
+        "Monitoring": "false",
+        "SecurityGroupIds" : [{ "Ref": "NewVPCSG" }],
+        "Tags": [
+            {
+                "Key": "Name",
+                "Value": "NewServer"
+            }
+        ],
+        "UserData": {
+            "Fn::Base64": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "#!/bin/bash -ex",
+                        "-"
+                    ]
+                ]
+            }
+        }
+}
+        }
+    },
+    "Outputs": {
+
+    }
+}
